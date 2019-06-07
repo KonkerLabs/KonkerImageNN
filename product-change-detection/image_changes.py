@@ -1,6 +1,6 @@
 from torchvision import transforms
 from PIL import Image
-from ... import yolo
+from yolo import yolov3
 from unet_models import *
 from sklearn.cluster import MiniBatchKMeans  # KMeans,
 import numpy as np
@@ -23,16 +23,31 @@ area = []
 
 
 class DifferenceDetection:
-    _file_prefix = 'DifferenceDetection'
-    _output_dir = './output'
-    _cuda = True
     _cache = dict()
     _logger = logging.getLogger('DifferenceDetection')
     _model = None
     _num_classes = 0
-    _caching_enabled = False
 
-    def __init__(self, file_prefix='DifferenceDetection', output_dir='./output', cuda=True, caching=False, export_image=False):
+    class DEFAULTS:
+        file_prefix = 'DifferenceDetection'
+        output_dir = './output'
+        cuda = True
+        caching = False
+        export_image = False
+        oversizing_horiz = 10  # x
+        oversizing_verti = 15  # y
+        scale_factor = 0.2
+        change_threshold = 0.32
+        color_diff_threshold = 60
+        num_classes = 30
+        color_cnt = 7
+        pre_scale_size = (384, 384)
+        pre_scale_factor = 1
+        mask_path = 'conf/shelf_mask.png'
+        areas_path = 'conf/areas.json'
+
+    def __init__(self, file_prefix=DEFAULTS.file_prefix, output_dir=DEFAULTS.output_dir, cuda=DEFAULTS.cuda,
+                 caching=DEFAULTS.caching, export_image=DEFAULTS.export_image, mask_path=DEFAULTS.mask_path, areas_path=DEFAULTS.areas_path, ):
         Utils.init_logging()
         self._file_prefix = file_prefix
         self._output_dir = output_dir
@@ -40,6 +55,9 @@ class DifferenceDetection:
         self._yolo = yolov3.Yolov3()
         self._caching_enabled = caching
         self._export_image = export_image
+        self._areas_path = areas_path
+        self._mask_path = mask_path
+        Utils.set_areas_file(areas_path)
         if self._cuda:
             torch.cuda.empty_cache()
 
@@ -138,10 +156,11 @@ class DifferenceDetection:
         img = img[:, :, ::-1]
         return img'''
 
-    def calculate_differences(self, img_path1, img_path2, scale_factor, change_threshold, color_cnt, oversizing_x=15,
-                              oversizing_y=2, pre_scale_factor=1, overwrite=False, color_diff_threshold=0.18,
-                              out_color_diff=True, out_diff=True, num_classes=150, pre_scale_size=None,
-                              mask_path='shelf_mask.png', evaluation_mode=True):
+    def calculate_differences(self, img_path1, img_path2, scale_factor, change_threshold, color_cnt,
+                              oversizing_horizontal=DEFAULTS.oversizing_horiz,
+                              oversizing_vertical=DEFAULTS.oversizing_verti, pre_scale_factor=DEFAULTS.pre_scale_factor, overwrite=False, color_diff_threshold=DEFAULTS.color_diff_threshold,
+                              out_color_diff=True, out_diff=False, num_classes=DEFAULTS.num_classes, pre_scale_size=DEFAULTS.pre_scale_size,
+                               evaluation_mode=False):
         # identifier = f'{img_path1}_{img_path2}{self._file_prefix}_scale_fac={scale_factor}/_change_thres='\
         #              f'{change_threshold}/_colors={color_cnt}_oversizing_x={oversizing_x}_oversizing_y='\
         #              f'{oversizing_y}_num_classes={num_classes}_color_diff_threshold={color_diff_threshold}_'\
@@ -149,15 +168,16 @@ class DifferenceDetection:
         Utils.timing()
         if evaluation_mode:
             identifier = f'{self._file_prefix}_scale_fac={scale_factor}_change_thres={change_threshold}_' \
-                f'colors={color_cnt}_oversizing_x={oversizing_x}_oversizing_y={oversizing_y}_num_classes={num_classes}_' \
+                f'colors={color_cnt}_oversizing_x={oversizing_horizontal}_oversizing_y={oversizing_vertical}_num_classes={num_classes}_' \
                 f'color_diff_threshold={color_diff_threshold}_pre_scaltede=' \
-                f'{pre_scale_factor if pre_scale_factor != 1 else pre_scale_size}/{img_path1.replace("/", "")}_{img_path2.replace("/", "")}'
+                f'{pre_scale_factor if pre_scale_factor != 1 else pre_scale_size}/{img_path1.replace("/","")}_'\
+                f'{img_path2.replace("/", "")}'
         else:
             identifier = f'{img_path1.replace("/", "_")}_{img_path2.replace("/", "_")}'
 
-        identifier = identifier.replace('(', '')
-        identifier = identifier.replace(')', '')
-        identifier = identifier.replace(' ', '')
+            identifier = identifier.replace('(', '')
+            identifier = identifier.replace(')', '')
+            identifier = identifier.replace(' ', '')
 
         self._logger.info(f'Calculating differences for: {identifier}')
 
@@ -165,7 +185,7 @@ class DifferenceDetection:
         filename_change = f'{self._output_dir}/{identifier}_out_change.png'
 
         if self._export_image:
-            # Check if it was already executed
+        # Check if it was already executed
             if not (overwrite or Utils.DEBUG) and os.path.isfile(filename_out):
                 self._logger.info(f'{identifier} already ran!')
                 return None
@@ -173,6 +193,7 @@ class DifferenceDetection:
                 if not os.path.isdir(filename_out[:filename_out.rfind('/')]):
                     os.makedirs(filename_out[:filename_out.rfind('/')])
                 os.system(f'touch {filename_out}')
+
 
         # Load images from cache or disk
 
@@ -191,7 +212,7 @@ class DifferenceDetection:
         if self._caching_enabled and 'mask' in self._cache.keys():
             _mask = self._cache['mask']
         else:
-            _mask = Image.open(mask_path)
+            _mask = Image.open(self._mask_path)
             _mask = _mask.convert('1')
             self._cache['mask'] = _mask
 
@@ -283,8 +304,8 @@ class DifferenceDetection:
             # img2_tens = Utils.tens_scale_2d(img2_tens, scale_factor=0.5)
             color_differences = color_comp.compare_colors_of_differences(dif_scaled, img1_tens,
                                                                          img2_tens, color_cnt,
-                                                                         oversizing_x=oversizing_x,
-                                                                         oversizing_y=oversizing_y,
+                                                                         oversizing_x=oversizing_horizontal,
+                                                                         oversizing_y=oversizing_vertical,
                                                                          change_threshold=change_threshold)
             Utils.timing(name='Color Differences')
             # color_differences = Utils.tens_scale_2d(color_differences, scale_factor=1, mode='bilinear')
@@ -307,6 +328,7 @@ class DifferenceDetection:
         self._logger.info(f'Finished calculating differences for: {identifier}')
         return result, values
 
+
     @classmethod
     def check_areas(cls, color_diffs):
         full_mask = torch.zeros_like(color_diffs)
@@ -324,6 +346,7 @@ class DifferenceDetection:
                         break
         full_mask[0][0] = 1
         return full_mask, result_arr, diffs
+
 
     @classmethod
     def check_coverage(cls, tens):
@@ -357,29 +380,15 @@ class Utils:
     _logger = None
     _logging_initialized = False
     DEBUG = False
+    _areas_path = None
+
+    @classmethod
+    def set_areas_file(cls, areas_path):
+        cls._areas_path =areas_path
 
     @classmethod
     def get_areas(cls):
-        new_areas = [[[(334, 295), (344, 385), (3, 475), (1, 392)],
-                      [(377, 290), (382, 382), (904, 311), (899, 229)],
-                      [(937, 201), (937, 300), (1272, 295), (1258, 207)],
-                      [(1284, 232), (1293, 294), (1492, 303), (1480, 242)]],
-                     [[(3, 511), (346, 426), (362, 515), (3, 600)],
-                      [(390, 431), (409, 550), (909, 467), (895, 365)],
-                      [(935, 363), (933, 465), (1254, 424), (1252, 332)],
-                      [(1284, 355), (1286, 414), (1481, 400), (1478, 339)]],
-                     [[(402, 700), (374, 562), (5, 648), (13, 776)],
-                      [(414, 603), (444, 714), (894, 630), (883, 504)],
-                      [(930, 502), (936, 614), (1265, 545), (1252, 458)],
-                      [(1281, 464), (1286, 536), (1480, 498), (1464, 441)]],
-                     [[(42, 826), (69, 900), (446, 843), (420, 758)],
-                      [(443, 739), (892, 649), (901, 741), (464, 841), (443, 739)],
-                      [(933, 640), (937, 734), (1265, 642), (1252, 571)],
-                      [(1284, 573), (1286, 633), (1473, 574), (1471, 531)]],
-                     [[(452, 874), (75, 928), (118, 1040), (485, 994)],
-                      [(482, 869), (904, 769), (920, 889), (508, 981)],
-                      [(944, 762), (960, 875), (1259, 769), (1238, 676)],
-                      [(1279, 690), (1284, 747), (1464, 676), (1452, 628)]]]
+        new_areas = json.load(open(cls._areas_path))
         return new_areas
 
     @classmethod
@@ -570,7 +579,8 @@ class Utils:
                 for i in range(0, len(images) - 1):
                     result, vals = dif_det.calculate_differences(images[i], images[i + 1], scale_fac, change_thres,
                                                                  c_cnt,
-                                                                 oversizing_x=oversizing_x, oversizing_y=oversizing_y,
+                                                                 oversizing_horizontal=oversizing_x,
+                                                                 oversizing_vertical=oversizing_y,
                                                                  num_classes=num_cla,
                                                                  color_diff_threshold=color_diff_thres,
                                                                  pre_scale_size=pre_scale, overwrite=True,
@@ -864,9 +874,10 @@ def _main():
     #                oversizing_horiz=[5, 10, 15, 25],
     #                num_classes=[30, 50, 100, 15], color_cnt=[7, 9], pre_scale_size=(384, 384),
     #                change_threshold=[0.38, 0.41, 0.4, 0.39, 0.42])
-    Utils.evaluate(images, test, scale_factor=0.2, color_diff_threshold=[40, 50, 60, 70, 80, 90], oversizing_vert=[10,15],
-                   oversizing_horiz=[15,10],
-                   num_classes=[30,50], color_cnt=[7, 9], pre_scale_size=(384, 384),
+    Utils.evaluate(images, test, scale_factor=0.2, color_diff_threshold=[40, 50, 60, 70, 80, 90],
+                   oversizing_vert=[10, 15],
+                   oversizing_horiz=[15, 10],
+                   num_classes=[30, 50], color_cnt=[7, 9], pre_scale_size=(384, 384),
                    change_threshold=[0.26, 0.24, 0.2, 0.23, 0.22, 0.21, 0.3, 0.29, 0.28, 0.31, 0.25, 0.32, 0.27, 0.35,
                                      0.36, 0.37, 0.38, 0.39, 0.4], evaluation_file='my_eval_20_60_col_diff.json')
 

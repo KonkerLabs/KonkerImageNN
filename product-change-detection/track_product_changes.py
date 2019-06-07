@@ -11,6 +11,7 @@ from requests.auth import HTTPBasicAuth
 import json
 import numpy as np
 
+
 def __main():
     # [ color_cnt, oversizing_horiz, oversizing_vert, num_classes, scale_factor,
     # color diff_threshold, pre_scale_size, change_threshold]
@@ -18,24 +19,28 @@ def __main():
     parser = ArgumentParser('Detecting Product changes')
     parser.add_argument('folder', type=str,
                         help='Folder where new images appear')
-    parser.add_argument("--scale_factor", default=0.2, type=float,
+    parser.add_argument("--scale_factor", default=DifferenceDetection.DEFAULTS.scale_factor, type=float,
                         help="Scale factor")
-    parser.add_argument("--change_threshold", default=0.32, type=float,
+    parser.add_argument("--change_threshold", default=DifferenceDetection.DEFAULTS.change_threshold, type=float,
                         help="Changes below that threshold are not considered")
-    parser.add_argument("--oversizing_vertical", default=15, type=int,
+    parser.add_argument("--oversizing_vertical", default=DifferenceDetection.DEFAULTS.oversizing_horiz, type=int,
                         help="Oversizing vertically")
-    parser.add_argument("--oversizing_horizontal", default=10, type=int,
+    parser.add_argument("--oversizing_horizontal", default=DifferenceDetection.DEFAULTS.oversizing_horiz, type=int,
                         help="Oversizing horizontal")
-    parser.add_argument("--color_diff_threshold", default=60, type=float,
+    parser.add_argument("--color_diff_threshold", default=DifferenceDetection.DEFAULTS.color_diff_threshold, type=float,
                         help="Color differences below that threshold are not considered")
-    parser.add_argument("--num_classes", default=30, type=int,
+    parser.add_argument("--num_classes", default=DifferenceDetection.DEFAULTS.num_classes, type=int,
                         help="Number of classes used for the change detection")
-    parser.add_argument("--color_cnt", default=7, type=int,
+    parser.add_argument("--color_cnt", default=DifferenceDetection.DEFAULTS.color_cnt, type=int,
                         help="Number of dominant colors to compare")
-    parser.add_argument("--pre_scale", default=(384, 384), type=tuple,
+    parser.add_argument("--pre_scale", default=DifferenceDetection.DEFAULTS.pre_scale_size, type=tuple,
                         help="Scaling before the change detection")
-    parser.add_argument("--prefix", default='changes', type=str,
-                        help="File prefix")
+    parser.add_argument("--prefix", default=DifferenceDetection.DEFAULTS.file_prefix, type=str,
+                        help="Output file prefix")
+    parser.add_argument("--mask_path", default=DifferenceDetection.DEFAULTS.mask_path, type=str,
+                        help="Black/White mask to remove not needed parts of the image (black: not relevant, white: relevant)")
+    parser.add_argument("--areas_path", default=DifferenceDetection.DEFAULTS.areas_path, type=str,
+                        help="Json file with containing a single multi dimensional array with 4 coordinates for the shelf areas for every element.")
     parser.add_argument("--username", default="t0vbkqelr9hi", type=str,
                         help="Konker username to send change notifications to")
     parser.add_argument("--password", default="RBU31lv8T1Yk", type=str,
@@ -52,13 +57,14 @@ def __main():
 class DetectionProcessor:
     def __init__(self, args):
         self.args = args
-        self.dif_det = DifferenceDetection(file_prefix=args.prefix, caching=True)
+        self.dif_det = DifferenceDetection(file_prefix=args.prefix, caching=True, mask_path=args.mask_path,
+                                           areas_path=args.areas_path)
 
     def callback(self, f1, f2):
         result = self.dif_det.calculate_differences(f1, f2, self.args.scale_factor, self.args.change_threshold,
                                                     self.args.color_cnt,
-                                                    oversizing_x=self.args.oversizing_horizontal,
-                                                    oversizing_y=self.args.oversizing_vertical,
+                                                    oversizing_horizontal=self.args.oversizing_horizontal,
+                                                    oversizing_vertical=self.args.oversizing_vertical,
                                                     overwrite=False,
                                                     color_diff_threshold=self.args.color_diff_threshold,
                                                     num_classes=self.args.num_classes,
@@ -67,7 +73,7 @@ class DetectionProcessor:
 
             if result[0].sum() > 0:
                 print('Changes detected')
-                self.send_detection_results((np.round(result[0].numpy(), decimals=2)*100).astype(int).tolist())
+                self.send_detection_results((np.round(result[0].numpy(), decimals=2) * 100).astype(int).tolist())
             else:
                 print('No changes detected')
 
