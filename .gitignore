@@ -106,3 +106,6 @@ venv.bak/
 # Custom
 *.weights
 .idea
+output
+people-detection/data
+yoloBackup

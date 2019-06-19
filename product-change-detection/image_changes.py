@@ -1,7 +1,7 @@
 from torchvision import transforms
 from PIL import Image
 from yolo import yolov3
-from unet_models import *
+from .unet_models import *
 from sklearn.cluster import MiniBatchKMeans  # KMeans,
 import numpy as np
 from multiprocessing import Pool, cpu_count

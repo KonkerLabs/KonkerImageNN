@@ -2,29 +2,16 @@ from yolo import yolov3
 import os
 import matplotlib.pyplot as plt
 from PIL import Image
-import scipy.cluster.hierarchy as hcluster
-from sklearn.cluster import dbscan
 import numpy as np
 from shapely.geometry import box, polygon
 from sklearn.cluster import DBSCAN
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
 import queue
 import _pickle as cPickle
 from time import sleep
 import threading
 from argparse import ArgumentParser
-
-
-class MyHandler(FileSystemEventHandler):
-
-    def __init__(self, created_callback=None):
-        self._created_callback = created_callback
-
-    def on_created(self, event):
-        if callable(self._created_callback):
-            self._created_callback(event.src_path)
-        print(f'event type: {event.event_type}  path : {event.src_path}')
+import utils.utils as utils
 
 
 class ParkingLotDetector:
@@ -41,13 +28,12 @@ class ParkingLotDetector:
         self._min_cluster_size = min_cluster_size
         self._buffer_location = buffer_location
         self._output_location = output_location
-        self._event_handler = None
-        self._observer = None
         self._yoloV3 = yolov3.Yolov3()
-        self._file_queue = queue.Queue()
         self._detect_thread_running = False
         self._working_folder = folder
         self._show = show
+        self._tracker=utils.FileCreatedTracker(working_folder=folder, callback=self.load_cars,
+                                               args_array=True)
 
     def __del__(self):
         self.stop_tracking()
@@ -56,19 +42,11 @@ class ParkingLotDetector:
 
     # region Track folder
     def track_live(self):
-        self._event_handler = MyHandler(created_callback=self.add_to_queue)
-        self._detect_thread_running = True
         self.load_all_cars()
-        t1 = threading.Thread(target=self.run_detect_queue)
-        t1.start()
-        self._observer = Observer()
-        self._observer.schedule(self._event_handler, self._working_folder, recursive=True)
-
-        self._observer.start()
+        self._tracker.start()
 
     def stop_tracking(self):
-        if self._observer:
-            self._observer.stop()
+        self._tracker.stop()
 
     # endregion
 
@@ -90,25 +68,6 @@ class ParkingLotDetector:
             data[files[i]] = res[i]
         print(f'Processed {len(files)} file(s)')
         self._dump_data(data)
-
-    # endregion
-
-    # region File processing queue
-
-    def add_to_queue(self, path):
-        self._file_queue.put(path)
-
-    def run_detect_queue(self):
-        print('Waiting for new images...')
-        while self._detect_thread_running:
-            file_list = list()
-            file_list.append(self._file_queue.get())
-            sleep(3)
-            if self._file_queue.qsize() > 0:
-                for i in range(self._file_queue.qsize()):
-                    file_list.append(self._file_queue.get())
-            if len(file_list) > 0:
-                self.load_cars(file_list)
 
     # endregion
 
@@ -318,7 +277,8 @@ def _main():
     args = parser.parse_args()
 
     pld = ParkingLotDetector(args.folder, min_cluster_size=args.min_cluster_size, buffer_location=args.buffer_location,
-                             output_location=args.output_location)
+                             output_location=args.output_location, konker_username=args.username,
+                             konker_password=args.password)
     if args.mode == 'live':
         pld.track_live()
 

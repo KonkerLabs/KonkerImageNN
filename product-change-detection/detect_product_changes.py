@@ -1,4 +1,4 @@
-from image_changes import Utils, DifferenceDetection
+from .image_changes import Utils, DifferenceDetection
 from argparse import ArgumentParser
 
 
