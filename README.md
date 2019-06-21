@@ -1,4 +1,5 @@
 # KonkerImageNN
+Based on [PyTorch-YOLOv3](https://github.com/eriklindernoren/PyTorch-YOLOv3) by [eriklindernoren](https://github.com/eriklindernoren)
 ## Parkinglot detection
 To detect parking lots the `parkinglot-detection.py` can be exectuted in two different modes:
 - `live`: Tracks the given folder and detects car positions out of all existing and newly incoming images and saves those detections.
