@@ -55,30 +55,34 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --scale_factor SCALE_FACTOR
-                        Scale factor
+                        Scale factor (default: 0.2)
   --change_threshold CHANGE_THRESHOLD
                         Changes below that threshold are not considered
+                        (default: 0.32)
   --oversizing_vertical OVERSIZING_VERTICAL
-                        Oversizing vertically
+                        Oversizing vertically (default: 10)
   --oversizing_horizontal OVERSIZING_HORIZONTAL
-                        Oversizing horizontal
+                        Oversizing horizontal (default: 10)
   --color_diff_threshold COLOR_DIFF_THRESHOLD
                         Color differences below that threshold are not
-                        considered
+                        considered (default: 60)
   --num_classes NUM_CLASSES
                         Number of classes used for the change detection
+                        (default: 30)
   --color_cnt COLOR_CNT
-                        Number of dominant colors to compare
+                        Number of dominant colors to compare (default: 7)
   --pre_scale PRE_SCALE
-                        Scaling before the change detection
-  --prefix PREFIX       Output file prefix
+                        Scaling before the change detection (default: (384,
+                        384))
+  --prefix PREFIX       Output file prefix (default: DifferenceDetection)
   --mask_path MASK_PATH
                         Black/White mask to remove not needed parts of the
-                        image (black: not relevant, white: relevant)
+                        image (black: not relevant, white: relevant) (default:
+                        conf/shelf_mask.png)
   --areas_path AREAS_PATH
                         Json file with containing a single multi dimensional
                         array with 4 coordinates for the shelf areas for every
-                        element.
+                        element. (default: conf/areas.json)
 ```
 
 ### `track_product_changes.py` 
@@ -130,4 +134,41 @@ optional arguments:
                         element.
   --username USERNAME   Konker username to send change notifications to
   --password PASSWORD   Konker password to send change notifications to
+```
+## People detection
+### `detect_people.py`
+This script can count and detect people on images.
+- `count`: The count is exported to a file `output_counts.json` inside the `OUTPUT_LOCATION`.
+- `images`: Outputs the images including the bounding boxes in the `OUTPUT_LOCATION`.
+
+If `send_to_konker` is set the people count is pushed to the konker platform.
+```
+usage: Detect parking lots in parking lot images [-h] [--mode {live,all}]
+                                                 [--output_mode {count,images}]
+                                                 [--output_location OUTPUT_LOCATION]
+                                                 [--img-size IMG_SIZE]
+                                                 [--send_to_konker SEND_TO_KONKER]
+                                                 [--konker_username KONKER_USERNAME]
+                                                 [--konker_password KONKER_PASSWORD]
+                                                 folder
+
+positional arguments:
+  folder                Folder containing the images
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --mode {live,all}     Runnning mode (default: None)
+  --output_mode {count,images}
+                        Output mode (default: images)
+  --output_location OUTPUT_LOCATION
+                        Location of all outputs (default: ./output)
+  --img-size IMG_SIZE   Size of the images to process (default: 1920)
+  --send_to_konker SEND_TO_KONKER
+                        If set to true the people count is sent to konker
+                        (default: False)
+  --konker_username KONKER_USERNAME
+                        Konker username to send change notifications to
+                        (default: ************)
+  --konker_password KONKER_PASSWORD
+                        Konker password to send change notifications to
 ```
