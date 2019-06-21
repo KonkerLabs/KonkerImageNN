@@ -48,16 +48,6 @@ class Yolov3:
             input_imgs = input_imgs.type(tensor)
             if self.cuda:
                 input_imgs = input_imgs.cuda()
-            # # Get detections
-            # with torch.no_grad():
-            #     detections = model(input_imgs)
-            #     detections = non_max_suppression(detections, 80, conf_thres, nms_thres)
-            # # Save image and detections
-            # img = np.array(Image.open(img_paths[0]))
-            # masks.append(torch.ones(img.shape[0], img.shape[1]))
-            # img_detections.extend(detections)
-
-
             with torch.no_grad():
                 detections = self.model(input_imgs)
                 detections = non_max_suppression(detections, self.conf_thres, self.nms_thres)
@@ -65,14 +55,6 @@ class Yolov3:
                 for i in range(len(img_paths)):
                     masks.append(torch.ones(full_img_size[0], full_img_size[1]))
             img_detections.append(detections)
-            # for proc in psutil.process_iter():
-            #     print(proc.open_files())
-        #     if len(threads) >= self._thread_cnt:
-        #         for thread in threads:
-        #             thread.join()
-        #             img_detections.append(thread.detections)
-        #         threads = []
-        # for thread in threads:
 
         for indx in range(0, len(img_detections)):
 

@@ -32,9 +32,11 @@ def __main():
     parser.add_argument("--prefix", default=DifferenceDetection.DEFAULTS.file_prefix, type=str,
                         help="Output file prefix")
     parser.add_argument("--mask_path", default=DifferenceDetection.DEFAULTS.mask_path, type=str,
-                        help="Black/White mask to remove not needed parts of the image (black: not relevant, white: relevant)")
+                        help=("Black/White mask to remove not needed parts of the image (black: not relevant, "
+                              "white: relevant)"))
     parser.add_argument("--areas_path", default=DifferenceDetection.DEFAULTS.areas_path, type=str,
-                        help="Json file with containing a single multi dimensional array with 4 coordinates for the shelf areas for every element.")
+                        help=("Json file with containing a single multi dimensional array with 4 coordinates for the "
+                              "shelf areas for every element."))
     utils.KonkerSender.add_credential_options(parser)
     args = parser.parse_args()
     det_proc = DetectionProcessor(args)
