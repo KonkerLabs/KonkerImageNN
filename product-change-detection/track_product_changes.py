@@ -1,5 +1,5 @@
-from .image_changes import DifferenceDetection
-from argparse import ArgumentParser
+from image_changes import DifferenceDetection
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import time
 import os
 import numpy as np
@@ -10,7 +10,7 @@ def __main():
     # [ color_cnt, oversizing_horiz, oversizing_vert, num_classes, scale_factor,
     # color diff_threshold, pre_scale_size, change_threshold]
 
-    parser = ArgumentParser('Detecting Product changes')
+    parser = ArgumentParser('Detecting Product changes', formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('folder', type=str,
                         help='Folder where new images appear')
     parser.add_argument("--scale_factor", default=DifferenceDetection.DEFAULTS.scale_factor, type=float,

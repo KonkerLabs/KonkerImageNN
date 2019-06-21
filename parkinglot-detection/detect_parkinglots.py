@@ -5,12 +5,9 @@ from PIL import Image
 import numpy as np
 from shapely.geometry import box, polygon
 from sklearn.cluster import DBSCAN
-from watchdog.observers import Observer
-import queue
 import _pickle as cPickle
 from time import sleep
-import threading
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 import utils.utils as utils
 
 
@@ -163,24 +160,6 @@ class ParkingLotDetector:
         clusters = [elem for elem in clusters if elem != -1]
         return (clusters, centers, elements)
 
-    # def load(folder, k=None):
-    #     list = [file for file in os.listdir(folder) if os.path.isfile(os.path.join(folder, file))]
-    #     print(len(list))
-    #     if k is None:
-    #         images = list  # random.choices(list, k=k)
-    #     else:
-    #         images = random.choices(list, k=k)
-    #
-    #     images = [os.path.join(folder, im) for im in images]
-    #
-    #     path = f'{folder}_export.npy'
-    #     if os.path.isfile(path):
-    #         res = np.load(path, allow_pickle=True)
-    #     else:
-    #         res = yv3.yolo(images, return_mask=False, classes=(2,))
-    #         np.save(path, np.array(res))
-    #     return res
-
     @classmethod
     def _my_cluster(cls, detections, eps=DEFAULTS.eps):
         differences = np.full((len(detections), len(detections)), -1.0)
@@ -262,7 +241,7 @@ class ParkingLotDetector:
 
 
 def _main():
-    parser = ArgumentParser('Detect parking lots in parking lot images')
+    parser = ArgumentParser('Detect parking lots in parking lot images', formatter_class=ArgumentDefaultsHelpFormatter)
     parser.add_argument('folder', type=str, help='Folder containing the images')
     parser.add_argument("--mode", type=str, choices=['live', 'detect'],
                         help="Runnning mode")
@@ -277,8 +256,7 @@ def _main():
     args = parser.parse_args()
 
     pld = ParkingLotDetector(args.folder, min_cluster_size=args.min_cluster_size, buffer_location=args.buffer_location,
-                             output_location=args.output_location, konker_username=args.username,
-                             konker_password=args.password)
+                             output_location=args.output_location)
     if args.mode == 'live':
         pld.track_live()
 
@@ -287,86 +265,6 @@ def _main():
     else:
         pld.load_all_cars()
         pld.detect_parking_lots(eps=args.clustering_eps)
-
-    # pld.detect_parking_lots()
-    # # folder = 'sparking2'
-    # folder = 'camera3'  # 'smartparking' # 'sparking2
-    # # folder ='smartparking'
-    # min_cluster_size = 35
-    #
-    # thresh = 10
-    # res = []
-    # centers = []
-    # elements = []
-    # show = False
-
-    # res = load(folder)
-    # images = os.listdir(folder)
-    # #print(res.size)
-    # # centers = np.load('centers')
-    # print(len(res))
-    # for i in range(len(res)):
-    #
-    #     if show:
-    #         fig, ax = plt.subplots(1)
-    #         ax.imshow(Image.open(os.path.join(folder, images[i])))
-    #     for j in range(len(res[i])):
-    #         x1, y1, x2, y2, conf, cls_conf, cls_pred = res[i][j]
-    #
-    #         # Display the image
-    #         if show:
-    #             rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='r', facecolor='none')
-    #             ax.add_patch(rect)
-    #         centers.append((int((x1 + x2) / 2), (int((y1 + y2) / 2))))
-    #         elements.append(res[i][j])
-    #     if show:
-    #         plt.show()
-    #
-    # print(f'Cars detected: {len(elements)}')
-    #
-    # # TRYOUT CUSTOM CLUSTERING
-    # clusters = _my_cluster(elements)
-    #
-    # # Clustering
-    # #centers = np.array(centers)
-    # #clusters = hcluster.fclusterdata(centers, thresh, criterion="distance")
-    #
-    # fig, ax = plt.subplots(1)
-    # ax.imshow(Image.open(os.path.join(folder, images[0])))
-    # plot_clusters(ax,centers,clusters)
-    # plt.show()
-    #
-    # # remove all small clusters
-    # unique, counts = np.unique(clusters, return_counts=True)
-    # cluster_count = zip(unique, counts)
-    # for cc in cluster_count:
-    #     if cc[1] < min_cluster_size:
-    #         clusters[clusters == cc[0]] = -1
-    # centers = [cent for cent, clus in zip(centers, clusters) if clus != -1]
-    # elements = [elem for clust, elem in zip(clusters, elements) if clust != -1]
-    # clusters = [elem for elem in clusters if elem != -1]
-    #
-    # fig, ax = plt.subplots(1)
-    #
-    # # intersecting:
-    # for cluster in np.unique(clusters):
-    #     intersect = get_intersection2((np.array(elements)[np.array(clusters) == cluster]).tolist())
-    #     # rect = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=1, edgecolor='r', facecolor='none')
-    #     if type(intersect) == polygon.Polygon:
-    #         x, y = intersect.exterior.xy
-    #         ax.plot(x,y)
-    # # plotting
-    #
-    # ax.imshow(Image.open(os.path.join(folder,images[0])))
-    # plot_clusters(ax,centers,clusters)
-    # ax.axis("equal")
-    # title = "threshold: %f, number of clusters: %d" % (thresh, len(set(clusters)))
-    # plt.title(title)
-    #
-    #     # ax.add_patch(rect)
-    # plt.show()
-    # # plt.imshow(, alpha= 0.5)
-    # # plt.show()
 
 
 if __name__ == '__main__':

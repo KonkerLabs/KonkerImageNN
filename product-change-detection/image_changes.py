@@ -1,7 +1,7 @@
 from torchvision import transforms
 from PIL import Image
 from yolo import yolov3
-from .unet_models import *
+from unet_models import *
 from sklearn.cluster import MiniBatchKMeans  # KMeans,
 import numpy as np
 from multiprocessing import Pool, cpu_count
@@ -72,90 +72,6 @@ class DifferenceDetection:
         # sum_tens = sum_tens / torch.max(sum_tens)
         return sum_tens
 
-    '''
-    def prepare_tensor_test(self, data1, data2, num_classes):
-        thres = 0
-        sum_tens = torch.zeros(data1[:, :, 0].size())
-        for cnt in range(0, num_classes):
-            temp_tens = (data1[:, :, cnt] - data2[:, :, cnt]).abs()
-            temp_tens[temp_tens < thres] = 0
-            sum_tens += temp_tens
-
-        sum_tens = sum_tens / torch.max(sum_tens)
-        return sum_tens
-
-    def trygetdif(self, img1, img2):
-        pretrained = torchfcn.models.FCN8s.download()
-
-        model = torchfcn.models.FCN8s(n_class=21)
-        model_data = torch.load(pretrained)
-
-        try:
-            model.load_state_dict(model_data)
-        except Exception:
-            model.load_state_dict(model_data['model_state_dict'])
-        model.eval()
-        img1_ = Image.open(img1)
-        scale_fac = 1
-        img1 = transforms.Resize((int(img1_.size[1] / scale_fac), int(img1_.size[0] / scale_fac)))(img1_)
-        img1 = Utils.TO_TENSOR(img1)
-        img2_ = Image.open(img2)
-        img2 = transforms.Resize((int(img2_.size[1] / scale_fac), int(img2_.size[0] / scale_fac)))(img2_)
-        img2 = Utils.TO_TENSOR(img2)
-        # img1 = torch.from_numpy(img1).float()
-        # img2 = torch.from_numpy(img2).float()
-        # img1 = self.transform(img1)
-        # img2 = self.transform(img2)
-        img1 = img1.unsqueeze(0)
-        img2 = img2.unsqueeze(0)
-        # with torch.no_grad():
-        model.eval()
-        res1 = model(img1)[0]
-        res2 = model(img2)[0]
-
-        # print(res1.sum())
-        # print(res1.size())
-        # print(res2.size())
-        print(res1.size())
-        print(res2.size())
-        # res1 = torch.from_numpy(self.untransform(res1) .copy())
-        print(res1.size())
-        # res2 = torch.from_numpy(self.untransform(res2).copy())
-        res = self.prepare_tensor(res1, res2, 21)
-        print(scale_factor)
-        # res = Utils.tens_scale_2d(res, scale_factor=scale_factor)
-        # print(res.size())
-        res = res / res.max()
-        # res[res < 0.37] = 0
-        plt.imshow(img1_)
-        plt.imshow(img2_, alpha=0.5)
-        plt.imshow(Utils.TO_PIL(res).resize(img1_.size, resample=Image.NEAREST), cmap='hot', alpha=0.5)
-        # plt.imshow(Utils.TO_PIL(res1), cmap='hot', alpha=0.5)
-        # plt.imshow(Utils.TO_PIL(res2), cmap='hot', alpha=0.5)
-
-        plt.axis('off')
-        plt.show()
-        # plt.savefig('test1234', bbox_inches='tight', dpi=200)
-        plt.close()
-        print('test')
-
-
-    def transform(self, img):
-        img = img[:, :, ::-1]  # RGB -> BGR
-        img = img.astype(np.float64)
-        img -= np.array([104.00698793, 116.66876762, 122.67891434])
-        img = img.transpose(2, 0, 1)
-        img = torch.from_numpy(img).float()
-        return img
-
-    def untransform(self, img):
-        img = img.detach().numpy()
-        img = img.transpose(1, 2, 0)
-        img += np.array([104.00698793, 116.66876762, 122.67891434])
-        img = img.astype(np.uint8)
-        img = img[:, :, ::-1]
-        return img'''
-
     def calculate_differences(self, img_path1, img_path2, scale_factor, change_threshold, color_cnt,
                               oversizing_horizontal=DEFAULTS.oversizing_horiz,
                               oversizing_vertical=DEFAULTS.oversizing_verti, pre_scale_factor=DEFAULTS.pre_scale_factor, overwrite=False, color_diff_threshold=DEFAULTS.color_diff_threshold,
@@ -185,7 +101,7 @@ class DifferenceDetection:
         filename_change = f'{self._output_dir}/{identifier}_out_change.png'
 
         if self._export_image:
-        # Check if it was already executed
+            # Check if it was already executed
             if not (overwrite or Utils.DEBUG) and os.path.isfile(filename_out):
                 self._logger.info(f'{identifier} already ran!')
                 return None
@@ -193,7 +109,6 @@ class DifferenceDetection:
                 if not os.path.isdir(filename_out[:filename_out.rfind('/')]):
                     os.makedirs(filename_out[:filename_out.rfind('/')])
                 os.system(f'touch {filename_out}')
-
 
         # Load images from cache or disk
 
@@ -384,7 +299,7 @@ class Utils:
 
     @classmethod
     def set_areas_file(cls, areas_path):
-        cls._areas_path =areas_path
+        cls._areas_path = areas_path
 
     @classmethod
     def get_areas(cls):
@@ -884,225 +799,3 @@ def _main():
 
 if __name__ == '__main__':
     _main()
-
-'''
-def plot_colors2(hist, centroids):
-    bar = np.zeros((50, 300, 3), dtype="uint8")
-    start_x = 0
-
-    for (percent, color) in zip(hist, centroids):
-        # plot the relative percentage of each cluster
-        end_x = start_x + (percent * 300)
-        cv2.rectangle(bar, (int(start_x), 0), (int(end_x), 50),
-                      color.astype("uint8").tolist(), -1)
-        start_x = end_x
-
-    # return the bar chart
-    return bar
-
-
-def get_dominant_color(image, k=4, image_processing_size=None):
-    """
-    takes an image as input
-    returns the dominant color of the image as a list
-
-    dominant color is found by running k means on the
-    pixels & returning the centroid of the largest cluster
-
-    processing time is sped up by working with a smaller image;
-    this resizing can be done with the image_processing_size param
-    which takes a tuple of image dims as input
-
-    >>> get_dominant_color(my_image, k=4, image_processing_size = (25, 25))
-    [56.2423442, 34.0834233, 70.1234123]
-    """
-    # resize image if new dims provided
-    image = np.array(image)
-    if image_processing_size is not None:
-        image = cv2.resize(image, image_processing_size,
-                           interpolation=cv2.INTER_AREA)
-
-    # reshape the image to be a list of pixels
-    image = image.reshape((image.shape[0] * image.shape[1], 3))
-
-    # cluster and assign labels to the pixels
-    clt = KMeans(n_clusters=k)
-    labels = clt.fit_predict(image)
-
-    # count labels to find most popular
-    label_counts = Counter(labels)
-
-    # subset out most popular centroid
-    dominant_color = clt.cluster_centers_[label_counts.most_common(1)[0][0]]
-
-    return list(dominant_color)
-
-5
-def get_model():
-    model = unet11(pretrained='carvana')
-    model.eval()
-    return model
-'''
-'''# Classes 250
-# model = UNet16(num_classes=num_classes, pretrained=True)
-img1 = 'vid1.jpg'
-img2 = 'vid1.jpg'
-img1 = Image.open(img1)
-img2 = Image.open(img2)
-img1 = Utils.TO_TENSOR(img1.resize((1024,1024))).unsqueeze(0)
-img2 = Utils.TO_TENSOR(img2.resize((1024,1024))).unsqueeze(0)'''
-'''model1 = AlbuNet(pretrained=True, num_classes=num_classes)
-model2 = AlbuNet(pretrained=True, num_classes=num_classes)
-res1 = model1(img1)
-res2 = model2(img1)
-print((res1-res2).sum())
-del model1
-del model2
-model1 = AlbuNet(pretrained=True, num_classes=num_classes)
-model2 = AlbuNet(pretrained=True, num_classes=num_classes)
-res1 = model1(img1)
-res2 = model2(img1)
-print((res1-res2).sum())
-torch.manual_seed(0)
-model1 = AlbuNet(pretrained=True, num_classes=num_classes)
-model2 = AlbuNet(pretrained=True, num_classes=num_classes)
-res1 = model1(img1)
-res2 = model2(img1)
-print((res1-res2).sum())
-torch.manual_seed(0)
-np.random.seed(0)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-model1 = AlbuNet(pretrained=True, num_classes=num_classes)
-
-torch.manual_seed(0)
-model2 = AlbuNet(pretrained=True, num_classes=num_classes)
-
-#torch.manual_seed(0)
-model3 = AlbuNet(pretrained=True, num_classes=num_classes)
-model1.eval()
-model2.eval()
-model3.eval()
-with torch.no_grad():
-    res1 = model1(img1)
-    res1 = model1(img1)
-    res2 = model2(img2)
-    res3 = model3(img1)
-    print(res1.sum())
-    print(res2.sum())
-    print(res3.sum())
-    print(res1.sum()-res2.sum())
-    print(res2.sum()-res3.sum())
-    print(res1.max())
-    print(res2.max())
-    print(res3.max())
-'''
-
-'''for scale_factor in [0.20]:  # [0.038]:  # np.arange(0.08, 0.1, 0.01): , 0.03, 0.025, 0.032, 0.027  ,0.03,0.08
-    # scale_factor = round(scale_factor, 2)
-    for change_threshold in [0.38,0.4,0.42]:  # np.arange(0.05, 0.45, 0.05): ,0.2,0.3
-        change_threshold = round(change_threshold, 2)
-        for color_cnt in [9,7]:  # range(3, 8, 2):
-            for oversizing_x in [25, 15, 10, 5, 0]:  # [0,2,5]:
-                for oversizing_y in [25, 15, 10, 5, 0]:  # vertical
-                    for num_classes in [30, 50, 100, 150]:  # , 50, 100, 200,250]:
-                        for color_diff_threshold in [0.1]:
-                            dif_det.get_differences('vid7.jpg', 'vid8.jpg', scale_factor, change_threshold, color_cnt,
-                                                    oversizing_x=oversizing_x, oversizing_y=oversizing_y,
-                                                    num_classes=num_classes, color_diff_threshold=color_diff_threshold,
-                                                    pre_scale_size=(384, 384))
-                                                    '''
-
-# pre_scale_factor=0.75
-# dif_det = DifferenceDetection(file_prefix='score_test')
-#
-# scale_factor = 0.20
-# color_diff_threshold = 0.1
-#
-# settings = [[7, 25, 5, 30],
-#             [7, 5, 25, 150],
-#             [7, 10, 0, 30],
-#             [7, 10, 25, 30],
-#             [7, 10, 25, 50],
-#             [7, 15, 10, 30],
-#             [7, 15, 25, 100],
-#             [7, 0, 25, 30],
-#             [7, 0, 25, 50],
-#             [9, 10, 10, 150],
-#             [9, 15, 10, 50],
-#             [9, 15, 15, 100],
-#             ]
-
-# arr = []
-# if os.path.isfile('./evaluate.txt'):
-#     with open('evaluate.txt', 'r') as f:
-#         arr = json.load(f)
-#
-# for setting in settings:
-#     color_cnt = setting[0]
-#     oversizing_x = setting[1]
-#     oversizing_y = setting[2]
-#     num_classes = setting[3]
-#     for change_threshold in [0.38, 0.41, 0.4, 0.39, 0.42]:  # np.arange(0.05, 0.45, 0.05): ,0.2,0.3
-#         change_threshold = round(change_threshold, 2)
-#         score = torch.zeros(1)
-#         score -= 1
-#
-#         if [elem for elem in arr if elem['setting'] == setting and elem['change_thres'] == change_threshold]:
-#             continue
-#
-#         for i in range(0, len(images) - 2):
-#             result = dif_det.get_differences(images[i], images[i + 1], scale_factor, change_threshold, color_cnt,
-#                                              oversizing_x=oversizing_x, oversizing_y=oversizing_y,
-#                                              num_classes=num_classes, color_diff_threshold=color_diff_threshold,
-#                                              pre_scale_size=(384, 384), overwrite=True)
-#             if result is None:
-#                 continue
-#             if score.sum() == -1:
-#                 score += 1
-#             score += torch.tensor(result - torch.tensor(test[i])).abs().sum()
-#         if score.sum() != -1:
-#             temp = dict()
-#             temp['setting'] = setting
-#             temp['score'] = score.item()
-#             temp['change_thres'] = change_threshold
-#             arr.append(temp)
-#             print(temp)
-#             with open('evaluate.txt', 'w') as file:
-#                 file.write(json.dumps(arr))
-# print(min(arr, key=operator.itemgetter('score')))
-'''
-# main(0.05, 0.1, 5, oversizing_x=5, oversizing_y=10)
-print(f'{x}')
-
-
-    model = models.vgg16(pretrained=True)
-    # Set model to evaluation mode
-    model.eval()
-    my_embedding = torch.zeros([1,128,56,56])
-    emb1 = torch.zeros([1,128,56,56])
-    emb2 = torch.zeros([1,128,56,56])
-    def copy_data(m, i, o):
-      my_embedding.copy_(o.data)
-      # print(o.data.size())
-    h = layer.register_forward_hook(copy_data)
-    plt.imshow(transforms.ToPILImage()(img1_tens-img2_tens))
-    plt.show()
-    model(img1_tens.unsqueeze(0))
-    emb1.copy_(my_embedding)
-    model(img2_tens.unsqueeze(0))
-    emb2.copy_(my_embedding)
-    h.remove()
-    sum = 0
-    sum_tens =(emb1[0][0]-emb2[0][0]).abs()
-    for cnt in range(1, 127):
-      # diff = ((emb1[0][cnt]-emb2[0][cnt]).mean())
-      # sum += diff
-      sum_tens += (emb1[0][cnt]-emb2[0][cnt]).abs()
-    plt.figure()
-    sum_tens = sum_tens / torch.max(sum_tens)
-    sum_tens = torch.clamp(sum_tens, min=0.3)
-    ten = transforms.ToPILImage()(sum_tens).resize((width, height), resample=Image.NEAREST, box=None)
-
-    print(sum_tens.numpy().size)
-    print(transforms.ToTensor()(ten).numpy()[0])'''
