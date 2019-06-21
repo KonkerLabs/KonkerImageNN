@@ -1,6 +1,7 @@
 # KonkerImageNN
 Uses [PyTorch-YOLOv3](https://github.com/eriklindernoren/PyTorch-YOLOv3) by [eriklindernoren](https://github.com/eriklindernoren)
-To run the scripts on a Raspberry Pi the torch module has to be built directly on the device. To avoid that this predefined virtual environment can be used: [pytorch_venv.zip](https://drive.google.com/file/d/17ve3qpbIPEa7l18l2my0dBhqgEiLtVZU/view?usp=sharing)
+
+To run the scripts on a Raspberry Pi the torch module has to be built directly on the device. To avoid that this predefined virtual environment can be used: [pytorch_venv.zip](https://drive.google.com/file/d/17ve3qpbIPEa7l18l2my0dBhqgEiLtVZU/view?usp=sharing) (Tested on Raspberry Pi 3)
 ## Parkinglot detection
 To detect parking lots the `parkinglot-detection.py` can be exectuted in two different modes:
 - `live`: Tracks the given folder and detects car positions out of all existing and newly incoming images and saves those detections.
