@@ -37,7 +37,7 @@ optional arguments:
 ## Product change detection
 ### `detect_product_changes.py` 
 Can be used to manually detect product changes between two different images.
-Expects two pathes to images to compare. All variable
+Expects two pathes to images to compare. The algorithm used can be determinded here: [ImageNeuralNetworks.pdf](../product-change-detection/ImageNeuralNetworks.pdf)
 
 ```
 usage: Detecting Product changes [-h] [--scale_factor SCALE_FACTOR]
